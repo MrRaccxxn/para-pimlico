@@ -1,29 +1,36 @@
 import { ParaCore, SuccessfulSignatureRes } from "@getpara/react-sdk";
-import type { SignableMessage, Hash } from "viem";
-import { hashMessage } from "viem";
 
-export const customSignMessage = async (
+interface Transaction {
+  to: string;            
+  value: string;         
+  data: string;          
+  chainId: string;       
+}
+
+export const customSignTransaction = async (
   para: ParaCore,
-  message: SignableMessage
-): Promise<Hash> => {
+  transaction: Transaction 
+): Promise<string> => {
   console.log("Started custom signing transaction...");
 
-  const hashedMessage = hashMessage(message);
-  const hexToBase64 = Buffer.from(hashedMessage, "hex").toString("base64");
+  const hashedTransaction = hashTransaction(transaction);
 
-  const res = await para.signMessage({
+  const hexToBase64 = Buffer.from(hashedTransaction, "hex").toString("base64");
+
+  const res = await para.signTransaction({
     walletId: Object.values(para.wallets!)[0]!.id,
-    messageBase64: hexToBase64,
+    chainId: transaction.chainId,
+    transactionBase64: hexToBase64,
   });
 
   let signature = (res as SuccessfulSignatureRes).signature;
 
-  // Adjust `v` if it is below 27.
   const lastByte = parseInt(signature.slice(-2), 16);
   if (lastByte < 27) {
     const adjustedV = (lastByte + 27).toString(16).padStart(2, "0");
     signature = signature.slice(0, -2) + adjustedV;
   }
 
+  // Step 6: Return the final signed transaction
   return `0x${signature}`;
 };
